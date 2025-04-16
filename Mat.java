@@ -393,8 +393,51 @@ class Mat
         }
         
     }
-    class matix
+    class matrix
     {
+        double [][] PPmm(int width,int height,double fovD,double znear,double zfar)
+        {
+            
+            double PPmm[][] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+            double fov = Math.toRadians(fovD);
+            double a = (height / width);
+            
+            PPmm[0][0] = a*(1/Math.tan(fov/2));
+            PPmm[1][1] = (1/Math.tan(fov/2));
+            PPmm[2][2] = zfar/(zfar-znear);
+            PPmm[2][3] = (-zfar * znear) / (zfar - znear);
+            PPmm[3][2] = 1;
+            return PPmm;
+        }
+        double [][] Pdiv(double [][]PPmm ,vec3 b)
+        {
+            double cods[][] = matrix(vec3_4(b));
+            double r[][] = mul(PPmm,cods);
+            if(r[3][0] != 0)
+            {
+                r[0][0] /= r[3][0];
+                r[1][0] /= r[3][0];
+                r[2][0] /= r[3][0];
+            }
+            return r;
+        }
+        vec4 vec3_4(vec3 a)
+        {
+            return new vec4(a.x,a.y,a.z,1);
+        }
+        vec4 vec4(double [][]a)
+        {
+            return new vec4(a[0][0],a[1][0],a[2][0],a[3][0]);
+        }
+        double[][] matrix(vec4 b)
+        {
+            double x = b.x.doubleValue();
+            double y = b.y.doubleValue();
+            double z = b.z.doubleValue();
+            double w = b.w.doubleValue();
+            double a[][] = {{x},{y},{z},{w}};
+            return a;
+        }
         double [][] matrix(double a[])
         {
             double c[][] = new double[a.length][1];
@@ -419,15 +462,7 @@ class Mat
             double a[][] = {{x},{y},{z}};
             return a;
         }
-        double[][] matix(vec4 b)
-        {
-            double x = b.x.doubleValue();
-            double y = b.y.doubleValue();
-            double z = b.z.doubleValue();
-            double w = b.w.doubleValue();
-            double a[][] = {{x},{y},{z},{w}};
-            return a;
-        }
+        
         void printer(double a[][])
         {
            for(int i = 0 ; i < a.length ; i++)
@@ -439,9 +474,16 @@ class Mat
                System.out.println();
            }
         }
+        void printer(vec2 a[])
+        {
+           for(int i = 0 ; i < a.length ; i++)
+           {
+               System.out.println("x:"+a[i].x + " y:"+a[i].y);
+           }
+        }
         double [][] mul(double a[][] , double b[][])
         {
-            if(a.length != b[0].length)
+            if(a[0].length != b.length)
             {
                 System.err.println("ERROR : A col != B row ! ");
                 return null;
