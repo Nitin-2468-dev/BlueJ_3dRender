@@ -6,7 +6,7 @@ public class process
     private double vect[][];
     private int edge[][];
     Mat math = new Mat();
-    
+    String name;
     public double[][] getVect()
     {
         return vect;
@@ -19,7 +19,6 @@ public class process
     {
         Stack<Mat.vec3<Double>> vector;
         Stack<Mat.vec3<Integer>> indus;        
-        String name;
         BufferedReader read;
         OBJ(String Path) throws IOException,FileNotFoundException 
         {

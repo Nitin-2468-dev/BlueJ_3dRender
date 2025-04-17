@@ -19,7 +19,9 @@ public class window extends JFrame
     private boolean X=false,Y=false,Z=false;
     private double cameraZ;
     private int count = 0;
-    window(int Width, int Height  ,int Fps,double fovD , double znear , double zfar ,int scale , double angle , boolean X, boolean Y, boolean Z,double cameraZ)
+    private String Path;
+    private process proc = new process();
+    window(int Width, int Height  ,int Fps,double fovD , double znear , double zfar ,int scale , double angle , boolean X, boolean Y, boolean Z,double cameraZ,String Path)
     {
         this.width = Width;
         this.height = Height;
@@ -33,6 +35,8 @@ public class window extends JFrame
         this.Y =Y;
         this.Z = Z;
         this.cameraZ= cameraZ;
+        this.Path = Path;
+        this.title = proc.name;
         init();
     }
     void init()
@@ -52,11 +56,10 @@ public class window extends JFrame
         }
         void init()
         {
-            String path= "C:\\Users\\Nitin\\Desktop\\3D-obj\\Cube.obj";
-            process proc = new process();
+            
             try
             {
-                process.OBJ obj = proc.new OBJ(path);
+                process.OBJ obj = proc.new OBJ(Path);
             }
             catch (IOException ioe)
             {

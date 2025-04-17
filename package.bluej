@@ -1,12 +1,12 @@
 #BlueJ package file
-dependency1.from=process
+dependency1.from=window
 dependency1.to=Mat
 dependency1.type=UsesDependency
 dependency2.from=window
-dependency2.to=Mat
+dependency2.to=process
 dependency2.type=UsesDependency
-dependency3.from=window
-dependency3.to=process
+dependency3.from=process
+dependency3.to=Mat
 dependency3.type=UsesDependency
 editor.fx.0.height=678
 editor.fx.0.width=652
