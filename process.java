@@ -3,14 +3,15 @@ import java.util.*;
 
 public class process
 {
+    private double vect[][];
+    private int edge[][];
     Mat math = new Mat();
-    double vect[][];
-    int edge[][];
-    double[][] getVect()
+    
+    public double[][] getVect()
     {
         return vect;
     }
-    int[][] getEdge()
+    public int[][] getEdge()
     {
         return edge;
     }
