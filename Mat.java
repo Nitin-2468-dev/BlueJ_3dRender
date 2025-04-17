@@ -398,12 +398,12 @@ class Mat
         double [][] PPmm(int width,int height,double fovD,double znear,double zfar)
         {
             
-            double PPmm[][] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+            double PPmm[][] = new double[4][4];
             double fov = Math.toRadians(fovD);
-            double a = (height / width);
-            
-            PPmm[0][0] = a*(1/Math.tan(fov/2));
-            PPmm[1][1] = (1/Math.tan(fov/2));
+            double a = (double) (height / width);
+            double f = (1/Math.tan(fov/2));
+            PPmm[0][0] = f/a;
+            PPmm[1][1] = f;
             PPmm[2][2] = zfar/(zfar-znear);
             PPmm[2][3] = (-zfar * znear) / (zfar - znear);
             PPmm[3][2] = 1;
@@ -461,6 +461,36 @@ class Mat
             double z = b.z.doubleValue();
             double a[][] = {{x},{y},{z}};
             return a;
+        }
+        double[][] Rx(double a)
+        {
+            a = Math.toRadians(a);
+            double R[][]  = {
+                {1, 0 , 0},
+                {0 ,Math.cos(a),-Math.sin(a)},
+                {0 ,Math.sin(a),Math.cos(a)}
+            };        
+            return R;
+        }
+        double[][] Ry(double a)
+        {
+            a = Math.toRadians(a);
+            double R[][]  = {
+                {Math.cos(a), 0 , Math.sin(a)},
+                {0 ,1,0},
+                {-Math.sin(a) ,0,Math.cos(a)}
+            };        
+            return R;
+        }
+        double[][] Rz(double a)
+        {
+            a = Math.toRadians(a);
+            double R[][]  = {
+                {Math.cos(a),-Math.sin(a), 0},
+                {Math.sin(a),Math.cos(a), 0},
+                {0 ,0 , 1}
+            };        
+            return R;
         }
         
         void printer(double a[][])

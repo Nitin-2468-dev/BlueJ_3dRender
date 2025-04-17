@@ -73,7 +73,7 @@ public class process
             }
             
             edge = new int[indus.size()][3];
-            for(int i =0 ; i < indus.size(); i++)
+            for(int i =0 ; i < edge.length; i++)
             {
                 edge[i][0] = indus.get(i).getX();
                 edge[i][1] = indus.get(i).getY();
