@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.awt.Graphics2D;
+import java.util.ArrayList;
 
 public class window extends JFrame
 {
@@ -27,6 +28,7 @@ public class window extends JFrame
     private Mat.vec3<Double> lightDir;
     private double amb = 0.2;
     private Color base = new Color(102,178,255);
+    ArrayList<Integer> faceOrder ;
     window(int Width, int Height  ,int Fps,double fovD , double znear , double zfar ,int scale , double angle , boolean X, boolean Y, boolean Z,double cameraZ,String Path,Color base)
     {
         this.width = Width;
@@ -105,6 +107,19 @@ public class window extends JFrame
             normal = new double[edge.length][3];
             face = new boolean[edge.length];
             faceShader = new double[edge.length];
+            double depth[] = new double[edge.length];
+            faceOrder = new ArrayList<>(edge.length);
+            
+             for (int i = 0; i < edge.length; i++) {
+                 int x = edge[i][0],y = edge[i][1],z = edge[i][2];
+                double[] p0  = cameraSpace[x], p1  = cameraSpace[y],p2  = cameraSpace[z];
+                double r1 = cameraSpace[x][2];
+                double r2 = cameraSpace[y][2];
+                double r3 = cameraSpace[z][2];
+                depth[i] = r1+r2+r3/3;
+                faceOrder.add(i);
+            }
+            faceOrder.sort((j,i) -> Double.compare(depth[i],depth[j]));
             
             for(int i = 0 ; i < edge.length ; i++)
             {
@@ -174,7 +189,7 @@ public class window extends JFrame
             }
              
             int hw = (width/2),hh = (height/2);
-            for(int i = 0 ; i < edge.length ; i++)
+            for(int i : faceOrder)
             {
                 if(projected[edge[i][0]].getX() == null)
                 {
