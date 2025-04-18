@@ -13,6 +13,7 @@ public class window extends JFrame
     private double normal[][];
     private boolean face[];
     private int edge[][];
+    private double faceShader[];
     private double angle;
     private Mat math = new Mat();
     private Mat.matrix m =math.new matrix();
@@ -23,7 +24,10 @@ public class window extends JFrame
     private String Path;
     private process proc = new process();
     private Mat.vec3<Double> camera;
-    window(int Width, int Height  ,int Fps,double fovD , double znear , double zfar ,int scale , double angle , boolean X, boolean Y, boolean Z,double cameraZ,String Path)
+    private Mat.vec3<Double> lightDir;
+    private double amb = 0.2;
+    private Color base = new Color(102,178,255);
+    window(int Width, int Height  ,int Fps,double fovD , double znear , double zfar ,int scale , double angle , boolean X, boolean Y, boolean Z,double cameraZ,String Path,Color base)
     {
         this.width = Width;
         this.height = Height;
@@ -39,7 +43,9 @@ public class window extends JFrame
         this.displace= cameraZ;
         this.Path = Path;
         this.title = proc.name;
-        this.camera = math.new vec3<Double>(0.0,0.0,0.0);
+        this.camera = math.new vec3<>(0.0,0.0,0.0);
+        this.lightDir = math.new vec3<>(1.0/Math.sqrt(1+1+1),1.0/Math.sqrt(1+1+1),-1.0/Math.sqrt(1+1+1));
+        this.base = base;
         init();
     }
     void init()
@@ -59,7 +65,6 @@ public class window extends JFrame
         }
         void init()
         {
-            
             try
             {
                 process.OBJ obj = proc.new OBJ(Path);
@@ -99,9 +104,11 @@ public class window extends JFrame
             
             normal = new double[edge.length][3];
             face = new boolean[edge.length];
+            faceShader = new double[edge.length];
             
             for(int i = 0 ; i < edge.length ; i++)
             {
+                
                 int x = edge[i][0],y = edge[i][1],z = edge[i][2];
                 double[] p0  = cameraSpace[x], p1  = cameraSpace[y],p2  = cameraSpace[z];
                 
@@ -125,7 +132,19 @@ public class window extends JFrame
                 face[i] = (normal[i][0] * (p0[0] - camera.getX()) + 
                            normal[i][1] * (p0[1] - camera.getY()) +
                            normal[i][2] * (p0[2] - camera.getZ()) < 0);
+                           
+                
+                double diff = Math.max(0.0,
+                            normal[i][0] * lightDir.getX().doubleValue() + 
+                            normal[i][1] * lightDir.getY().doubleValue() +
+                            normal[i][2] * lightDir.getZ().doubleValue()
+                           );
+                diff = Math.min(1.0,Math.max(0.0,diff));
+                faceShader[i] = amb + (1-amb)*diff;
             }
+            
+            
+            
             projected = new Mat.vec2[cameraSpace.length];
             double PPmm[][] = m.PPmm(width,height,fovD,znear,zfar);
             for(int i = 0 ; i < cameraSpace.length ; i++)
@@ -153,11 +172,10 @@ public class window extends JFrame
             if (projected == null) {
                 return; 
             }
-            
+             
             int hw = (width/2),hh = (height/2);
             for(int i = 0 ; i < edge.length ; i++)
             {
-                
                 if(projected[edge[i][0]].getX() == null)
                 {
                     // m.printer(a);    
@@ -169,8 +187,9 @@ public class window extends JFrame
                         int x0,y0,x1,y1,x2,y2;
                         int x[] = new int[3], y[] = new int[3];
                         
-                        g2.setColor(Color.white);
-                        // g2.setColor(Color.black);
+                        float s = (float) faceShader[i];
+                        
+                        g2.setColor(Color.black);
                         x0 =(int)( projected[edge[i][0]].getX().doubleValue() *scale )+ hw;
                         y0 =(int)( projected[edge[i][0]].getY().doubleValue() *scale )+ hh;
                         x1 =(int)( projected[edge[i][1]].getX().doubleValue() *scale)+ hw;
@@ -182,7 +201,19 @@ public class window extends JFrame
                         g2.drawLine(x1,y1,x2,y2);
                         g2.drawLine(x2,y2,x0,y0);
                         
-                        g2.setColor(Color.black);
+                        
+                        
+                        int r0 = base.getRed(),   g0 = base.getGreen(),  b0 = base.getBlue();
+                        int R  = (int)(r0 * s),  
+                        G  = (int)(g0 * s),  
+                        B  = (int)(b0 * s);
+                        Color fillC = new Color(
+                          Math.min(255, Math.max(0, R)),
+                          Math.min(255, Math.max(0, G)),
+                          Math.min(255, Math.max(0, B))
+                        );
+                        g2.setColor(fillC);
+                        // g2.setColor(Color.black);
                         x[0] =(int)( projected[edge[i][0]].getX().doubleValue() *scale )+ hw;
                         y[0] =(int)( projected[edge[i][0]].getY().doubleValue() *scale )+ hh;
                         x[1] =(int)( projected[edge[i][1]].getX().doubleValue() *scale)+ hw;
