@@ -370,6 +370,14 @@ public class Mat
             };        
             return R;
         }
+        double[] unit(double a[])
+        {
+            double mag = Math.sqrt(a[0]*a[0] + a[1]*a[1] * a[2]*a[2]);
+            a[0] /= mag;
+            a[1] /= mag;
+            a[2] /= mag;
+            return a ;
+        }
         
         void printer(double a[][])
         {

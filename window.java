@@ -10,17 +10,19 @@ public class window extends JFrame
     private String title;
     private double model[][];
     private double word[][];
-    private double cameraSpace[][];
+    private double normal[][];
+    private boolean face[];
     private int edge[][];
     private double angle;
     private Mat math = new Mat();
     private Mat.matrix m =math.new matrix();
     private Mat.vec2<Double>[] projected;
     private boolean X=false,Y=false,Z=false;
-    private double cameraZ;
+    private double displace;
     private int count = 0;
     private String Path;
     private process proc = new process();
+    private Mat.vec3<Double> camera;
     window(int Width, int Height  ,int Fps,double fovD , double znear , double zfar ,int scale , double angle , boolean X, boolean Y, boolean Z,double cameraZ,String Path)
     {
         this.width = Width;
@@ -34,9 +36,10 @@ public class window extends JFrame
         this.X = X;
         this.Y =Y;
         this.Z = Z;
-        this.cameraZ= cameraZ;
+        this.displace= cameraZ;
         this.Path = Path;
         this.title = proc.name;
+        this.camera = math.new vec3<Double>(0.0,0.0,0.0);
         init();
     }
     void init()
@@ -75,7 +78,6 @@ public class window extends JFrame
         }
         void update()
         {
-            
             if(X)
             {
                 word = rotationX(angle,word);
@@ -92,9 +94,38 @@ public class window extends JFrame
             for (int i = 0; i < word.length; i++) {
                 cameraSpace[i][0] = word[i][0];
                 cameraSpace[i][1] = word[i][1];
-                cameraSpace[i][2] = word[i][2] + cameraZ;  
+                cameraSpace[i][2] = word[i][2] + displace;  
             }
             
+            normal = new double[edge.length][3];
+            face = new boolean[edge.length];
+            
+            for(int i = 0 ; i < edge.length ; i++)
+            {
+                int x = edge[i][0],y = edge[i][1],z = edge[i][2];
+                double[] p0  = cameraSpace[x], p1  = cameraSpace[y],p2  = cameraSpace[z];
+                
+                double vx1 = p1[0] - p0[0];
+                double vy1 = p1[1] - p0[1];
+                double vz1 = p1[2] - p0[2];
+                
+                double vx2 = p2[0] - p0[0];
+                double vy2 = p2[1] - p0[1];
+                double vz2 = p2[2] - p0[2];
+                
+                double nx = vy1 * vz2 - vz1 * vy2;
+                double ny = vz1 * vx2 - vx1 * vz2;
+                double nz = vx1 * vy2 - vy1 * vx2;
+                double len = 1/Math.sqrt(nx*nx+ny*ny+nz*nz);
+                
+                normal[i][0] = nx*len;
+                normal[i][1] = ny*len;
+                normal[i][2] = nz*len;
+                
+                face[i] = (normal[i][0] * (p0[0] - camera.getX()) + 
+                           normal[i][1] * (p0[1] - camera.getY()) +
+                           normal[i][2] * (p0[2] - camera.getZ()) < 0);
+            }
             projected = new Mat.vec2[cameraSpace.length];
             double PPmm[][] = m.PPmm(width,height,fovD,znear,zfar);
             for(int i = 0 ; i < cameraSpace.length ; i++)
@@ -122,28 +153,46 @@ public class window extends JFrame
             if (projected == null) {
                 return; 
             }
-            int x,y,x1,y1,x2,y2;
+            
             int hw = (width/2),hh = (height/2);
             for(int i = 0 ; i < edge.length ; i++)
             {
+                
                 if(projected[edge[i][0]].getX() == null)
                 {
                     // m.printer(a);    
                 }
                 else
                 {
-                    
-                    
-                    x =(int)( projected[edge[i][0]].getX().doubleValue() *scale )+ hw;
-                    y =(int)( projected[edge[i][0]].getY().doubleValue() *scale )+ hh;
-                    x1 =(int)( projected[edge[i][1]].getX().doubleValue() *scale)+ hw;
-                    y1 =(int)( projected[edge[i][1]].getY().doubleValue() *scale)+ hh;
-                    x2 =(int)( projected[edge[i][2]].getX().doubleValue() *scale)+ hw;
-                    y2 =(int)( projected[edge[i][2]].getY().doubleValue() *scale)+ hh;
-                    
-                    g2.drawLine(x,y,x1,y1);
-                    g2.drawLine(x1,y1,x2,y2);
-                    g2.drawLine(x2,y2,x,y);
+                    if(face[i])
+                    {
+                        int x0,y0,x1,y1,x2,y2;
+                        int x[] = new int[3], y[] = new int[3];
+                        
+                        g2.setColor(Color.white);
+                        // g2.setColor(Color.black);
+                        x0 =(int)( projected[edge[i][0]].getX().doubleValue() *scale )+ hw;
+                        y0 =(int)( projected[edge[i][0]].getY().doubleValue() *scale )+ hh;
+                        x1 =(int)( projected[edge[i][1]].getX().doubleValue() *scale)+ hw;
+                        y1 =(int)( projected[edge[i][1]].getY().doubleValue() *scale)+ hh;
+                        x2 =(int)( projected[edge[i][2]].getX().doubleValue() *scale)+ hw;
+                        y2 =(int)( projected[edge[i][2]].getY().doubleValue() *scale)+ hh;
+                        
+                        g2.drawLine(x0,y0,x1,y1);
+                        g2.drawLine(x1,y1,x2,y2);
+                        g2.drawLine(x2,y2,x0,y0);
+                        
+                        g2.setColor(Color.black);
+                        x[0] =(int)( projected[edge[i][0]].getX().doubleValue() *scale )+ hw;
+                        y[0] =(int)( projected[edge[i][0]].getY().doubleValue() *scale )+ hh;
+                        x[1] =(int)( projected[edge[i][1]].getX().doubleValue() *scale)+ hw;
+                        y[1] =(int)( projected[edge[i][1]].getY().doubleValue() *scale)+ hh;
+                        x[2] =(int)( projected[edge[i][2]].getX().doubleValue() *scale)+ hw;
+                        y[2] =(int)( projected[edge[i][2]].getY().doubleValue() *scale)+ hh;
+                        
+                        Polygon p = new Polygon(x, y, 3);
+                        g2.fillPolygon(p);
+                    }
                 }
             }
         }
