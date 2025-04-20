@@ -1,8 +1,11 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.*;
 import java.io.*;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
+import java.awt.Color;
+import java.util.Arrays;
 
 public class window extends JFrame
 {
@@ -18,7 +21,7 @@ public class window extends JFrame
     private double angle;
     private Mat math = new Mat();
     private Mat.matrix m =math.new matrix();
-    private Mat.vec2<Double>[] projected;
+    private Mat.vec3<Double>[] projected;
     private boolean X=false,Y=false,Z=false;
     private double displace;
     private int count = 0;
@@ -37,7 +40,10 @@ public class window extends JFrame
     private Mat.vec3<Double> lightDir;
     private double[][] mcamera;
     private double[][] view;
-    private int speed = 1;
+    private double speed = 0.1;
+    
+    private BufferedImage image;
+    private double[][] zBuffer;
     window(int Width, int Height  ,int Fps,double fovD , double znear , double zfar ,int scale , double angle , boolean X, boolean Y, boolean Z,double cameraZ,String Path,Color base)
     {
         this.width = Width;
@@ -58,6 +64,8 @@ public class window extends JFrame
         this.base = base;
         this.Up = math.new vec3<>(0.0,1.0,0.0);
         this.lookDir = math.new vec3<>(0.0,0.0,1.0);
+        image = new BufferedImage(Width,Height,BufferedImage.TYPE_INT_ARGB);
+        zBuffer = new double[Width][Height];
         init();
         
     }
@@ -66,7 +74,9 @@ public class window extends JFrame
         setSize(width,height);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        add(new Render());
+        Render r = new Render();
+        r.update();
+        add(r);
         setVisible(true);
         addKeyListener(in);
         setFocusable(true);
@@ -102,10 +112,8 @@ public class window extends JFrame
             timer.start();
         
         }
-        void update()
+        void input()
         {
-            target = camera.add(lookDir);
-            view = m.lookAt(camera, target, Up);
             if(in.up)
             {
                  camera.setY(camera.getY() - speed );
@@ -122,7 +130,9 @@ public class window extends JFrame
             {
                 camera.setX(camera.getX() + speed );
             }
-            
+        }
+        void rot()
+        {
             if(X)
             {
                 word = rotationX(angle,word);
@@ -134,7 +144,16 @@ public class window extends JFrame
             if(Z)
             {
                 word = rotationZ(angle,word);
-            }    
+            }
+        }
+        void update()
+        {
+            input();
+            rot();
+            
+            target = camera.add(lookDir);
+            view = m.lookAt(camera, target, Up);
+                
             double[][] cameraSpace = new double[word.length][3];
             for (int i = 0; i < word.length; i++) {
                 double[][] v4 = 
@@ -149,6 +168,7 @@ public class window extends JFrame
                 cameraSpace[i][1] = r[1][0];
                 cameraSpace[i][2] = r[2][0];  
             }
+
             normal = new double[edge.length][3];
             face = new boolean[edge.length];
             faceShader = new double[edge.length];
@@ -189,9 +209,7 @@ public class window extends JFrame
                 normal[i][1] = ny*len;
                 normal[i][2] = nz*len;
                 
-                face[i] = (normal[i][0] * (p0[0] - camera.getX()) + 
-                           normal[i][1] * (p0[1] - camera.getY()) +
-                           normal[i][2] * (p0[2] - camera.getZ()) < 0);
+                face[i] = (nz < 0);
                            
                 
                 double diff = Math.max(0.0,
@@ -203,14 +221,15 @@ public class window extends JFrame
                 faceShader[i] = amb + (1-amb)*diff;
             }
                         
-            projected = new Mat.vec2[cameraSpace.length];
+            projected = new Mat.vec3[cameraSpace.length];
             double PPmm[][] = m.PPmm(width,height,fovD,znear,zfar);
             for(int i = 0 ; i < cameraSpace.length ; i++)
             {
                 double o[][] = m.Pdiv(PPmm,math.new vec3<>(cameraSpace[i][0],cameraSpace[i][1],cameraSpace[i][2]));
-                projected[i] = math.new vec2<>(o[0][0],o[1][0]);
+                projected[i] = math.new vec3<>(o[0][0],o[1][0],o[2][0]);
             } 
         }
+        
         double[][] rotationX(double a,double [][] vect)
         {
             return  m.mult(vect,m.Rx(a));
@@ -223,72 +242,97 @@ public class window extends JFrame
         {
             return  m.mult(vect,m.Ry(a));
         }
+        void clearBuffer()
+        {
+            Graphics2D g2 = image.createGraphics();
+            g2.setColor(getBackground());
+            g2.fillRect(0,0,width,height);
+            g2.dispose();
+            
+            for(int x = 0 ; x < width ; x++)
+            {
+                Arrays.fill(zBuffer[x], Double.POSITIVE_INFINITY);
+            }
+        }
+        private void rasterTri(Mat.vec3<Double> a , Mat.vec3<Double> b , Mat.vec3<Double> c1 ,int scale,int hw , int hh, Color c)
+        {
+            int x0 = (int)(a.getX().doubleValue() * scale) + hw;
+            int y0 = (int)(a.getY().doubleValue() * scale) + hh;
+            int z0 = a.getZ().intValue();          // depth test only needs ints
+        
+            int x1 = (int)(b.getX().doubleValue() * scale) + hw;
+            int y1 = (int)(b.getY().doubleValue() * scale) + hh;
+            int z1 = b.getZ().intValue();
+        
+            int x2 = (int)(c1.getX().doubleValue() * scale) + hw;
+            int y2 = (int)(c1.getY().doubleValue() * scale) + hh;
+            int z2 = c1.getZ().intValue();
+            Mat.vec3<Integer> v0 = math.new vec3<>(x0,y0,z0); 
+            Mat.vec3<Integer> v1 = math.new vec3<>(x1,y1,z1); 
+            Mat.vec3<Integer> v2 = math.new vec3<>(x2,y2,z2); 
+            
+            int minX = Math.max(0,Math.min(v0.getX(),Math.min(v1.getX(),v2.getX())));
+            int maxX = Math.min(width-1,Math.max(v0.getX(),Math.max(v1.getX(),v2.getX())));
+            int minY = Math.max(0,Math.min(v0.getY(),Math.min(v1.getY(),v2.getY())));
+            int maxY = Math.min(height-1,Math.max(v0.getY(),Math.max(v1.getY(),v2.getY())));
+            
+            double area = edge(v0.getX(),v0.getY(),v1.getX(),v1.getY(),v2.getX(),v2.getY());
+            
+            for(int x = minX ; x <= maxX;x++)
+            {
+                for(int y = minY ; y <= maxY ; y++)
+                {
+                    double w0 = edge(v1.getX(),v1.getY(),v2.getX(),v2.getY(),x,y) / area;
+                    double w1 = edge(v2.getX(),v2.getY(),v0.getX(),v0.getY(),x,y) / area;
+                    double w2 = edge(v0.getX(),v0.getY(),v1.getX(),v1.getY(),x,y) / area;
+                    
+                    if(w0 >= 0 && w1 >= 0 && w2 >= 0)
+                    {
+                        double z = w0*v0.getZ() + w1*v1.getZ() + w2*v2.getZ() ;
+                        
+                        if(z < zBuffer[x][y])
+                        {
+                            zBuffer[x][y] = z;
+                            image.setRGB(x,y,c.getRGB());
+                        }
+                    }
+                }
+            }
+        }
+        private double edge(int ax , int ay , int bx , int by , int cx , int cy)
+        {
+            return (cx-ax)*(by-ay) - (cy-ay)*(bx-ax);
+        }
         public void paintComponent(Graphics g)
         {
             super.paintComponent(g);
             Graphics2D g2 = (Graphics2D) g;
+            clearBuffer();
             if (projected == null) {
                 return; 
             }
-            
-            
-            // g2.drawRect(testx,testy,50,50);
-            
             int hw = (width/2),hh = (height/2);
             for(int i : faceOrder)
             {
-                if(projected[edge[i][0]].getX() == null)
+                if(face[i])
                 {
-                    // m.printer(a);    
-                }
-                else
-                {
-                    if(face[i])
-                    {
-                        int x0,y0,x1,y1,x2,y2;
-                        int x[] = new int[3], y[] = new int[3];
-                        
-                        float s = (float) faceShader[i];
-                        
-                        g2.setColor(Color.black);
-                        x0 =(int)( projected[edge[i][0]].getX().doubleValue() *scale )+ hw;
-                        y0 =(int)( projected[edge[i][0]].getY().doubleValue() *scale )+ hh;
-                        x1 =(int)( projected[edge[i][1]].getX().doubleValue() *scale)+ hw;
-                        y1 =(int)( projected[edge[i][1]].getY().doubleValue() *scale)+ hh;
-                        x2 =(int)( projected[edge[i][2]].getX().doubleValue() *scale)+ hw;
-                        y2 =(int)( projected[edge[i][2]].getY().doubleValue() *scale)+ hh;
-                        
-                        g2.drawLine(x0,y0,x1,y1);
-                        g2.drawLine(x1,y1,x2,y2);
-                        g2.drawLine(x2,y2,x0,y0);
-                        
-                        
-                        
-                        int r0 = base.getRed(),   g0 = base.getGreen(),  b0 = base.getBlue();
-                        int R  = (int)(r0 * s),  
-                        G  = (int)(g0 * s),  
-                        B  = (int)(b0 * s);
-                        Color fillC = new Color(
-                          Math.min(255, Math.max(0, R)),
-                          Math.min(255, Math.max(0, G)),
-                          Math.min(255, Math.max(0, B))
-                        );
-                        g2.setColor(fillC);
-                        // g2.setColor(Color.black);
-                        x[0] =(int)( projected[edge[i][0]].getX().doubleValue() *scale )+ hw;
-                        y[0] =(int)( projected[edge[i][0]].getY().doubleValue() *scale )+ hh;
-                        x[1] =(int)( projected[edge[i][1]].getX().doubleValue() *scale)+ hw;
-                        y[1] =(int)( projected[edge[i][1]].getY().doubleValue() *scale)+ hh;
-                        x[2] =(int)( projected[edge[i][2]].getX().doubleValue() *scale)+ hw;
-                        y[2] =(int)( projected[edge[i][2]].getY().doubleValue() *scale)+ hh;
-                        
-                        Polygon p = new Polygon(x, y, 3);
-                        g2.fillPolygon(p);
-                        
-                        
-                    }
+                    Mat.vec3<Double> v0 = projected[edge[i][0]];
+                    Mat.vec3<Double> v1 = projected[edge[i][1]];
+                    Mat.vec3<Double> v2 = projected[edge[i][2]];
+                    float s = (float) faceShader[i];
+                    int r0 = base.getRed(),   g0 = base.getGreen(),  b0 = base.getBlue();
+                    int R  = (int)(r0 * s),  
+                    G  = (int)(g0 * s),  
+                    B  = (int)(b0 * s);
+                    Color fillC = new Color(
+                      Math.min(255, Math.max(0, R)),
+                      Math.min(255, Math.max(0, G)),
+                      Math.min(255, Math.max(0, B))
+                    );
+                    rasterTri(v0,v1,v2,scale,hw,hh,fillC);
                 }
             }
+            g.drawImage(image,0,0,null);
         }
     }
 }

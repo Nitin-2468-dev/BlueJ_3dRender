@@ -1,4 +1,4 @@
-public class Mat
+ public class Mat
 {
     class vec2< T extends Number>
     {
