@@ -20,11 +20,11 @@ class Main
         boolean Z = false;
         double cameraZ = 2;
         Color base = new Color(102,178,255);
-        String Path = "C:\\Users\\Nitin\\Desktop\\3D-obj\\Cube.obj";
-        // String Path = "C:\\Users\\Nitin\\Desktop\\3D-obj\\Suzanne.obj";
-        // String Path = "C:\\Users\\Nitin\\Desktop\\3D-obj\\Primamed.obj";
-        // String Path = "C:\\Users\\Nitin\\Desktop\\3D-obj\\Icosphere.obj";
-        // String Path = "C:\\Users\\Nitin\\Desktop\\3D-obj\\axys.obj";
+           String Path = "./cube.obj";
+        // String Path = "./Suzanne.obj";
+        // String Path = "./Primamed.obj";
+        // String Path = "./Icosphere.obj";
+        // String Path = "./axys.obj";
         
         window win = new window(Width,Height,Fps,fovD,znear,zfar,scale,angle,X,Y,Z,cameraZ,Path,base);
     }
