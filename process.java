@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.*;
+import java.util.ArrayList;
 
 public class process
 {
@@ -36,14 +37,15 @@ public class process
             while(Line != null)
             {
                 String split[];
+                List<Integer> vids = new ArrayList<>();
+                split = Line.split(" ");
+                String[] tok = Line.trim().split("\\s+");
                 if(Line.charAt(0) == 'o')
                 {
-                    split = Line.split(" ");
                     name = split[1];
                 }
                 if(Line.charAt(0) == 'v')
                 {
-                    split = Line.split(" ");
                     double x,y,z;
                     x = Double.valueOf(split[1]);
                     y = Double.valueOf(split[2]);
@@ -52,12 +54,17 @@ public class process
                 }
                 if(Line.charAt(0) == 'f')
                 {
-                    split = Line.split(" ");
-                    int x,y,z;
-                    x = Integer.valueOf(split[1]) - 1;
-                    y = Integer.valueOf(split[2]) - 1;
-                    z = Integer.valueOf(split[3]) - 1 ;
-                    indus.add(math.new vec3<>(x,y,z));
+                    for(int i = 1 ; i < tok.length ; i++)
+                    {
+                        String parts = tok[i];
+                        int sh = parts.indexOf('/');
+                        String idx= sh < 0 ? parts : parts.substring(0,sh);
+                        vids.add(Integer.parseInt(idx) - 1); 
+                    }
+                    for (int k = 1; k + 1 < vids.size(); k++) {
+                        int i0 = vids.get(0), i1 = vids.get(k), i2 = vids.get(k+1);
+                        indus.add(math.new vec3<>(i0, i2, i1));
+                    }
                 }
                 Line = read.readLine();
             }

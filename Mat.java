@@ -134,6 +134,16 @@ public class Mat
             double z1 = a.z.doubleValue();
             return new vec3(x-x1,y-y1,z-z1);
         }
+        public vec3<Double> sub(vec3<? extends Number> a,vec3<? extends Number> b )
+        {
+            double x = a.x.doubleValue();
+            double y = a.y.doubleValue();
+            double z = a.z.doubleValue();
+            double x1 = b.x.doubleValue();
+            double y1 = b.y.doubleValue();
+            double z1 = b.z.doubleValue();
+            return new vec3(x-x1,y-y1,z-z1);
+        }
         public vec3<Double> mult(double a)
         {
             double x = this.x.doubleValue();
@@ -148,7 +158,7 @@ public class Mat
             double z = this.z.doubleValue();
             return new vec3(x/a,y/a,z/a);
         }
-        vec3<Double> unit(double a)
+        vec3<Double> unit()
         {
             double x = this.x.doubleValue();
             double y = this.y.doubleValue();
@@ -170,6 +180,31 @@ public class Mat
             double z = this.z.doubleValue();
             double a[][] = {{x},{y},{z}};
             return a;
+        }
+        Double dot(vec3<? extends Number> a)
+        {
+            double x = this.x.doubleValue();
+            double y = this.y.doubleValue();
+            double z = this.z.doubleValue();
+            
+            double x1 = a.x.doubleValue();
+            double y1 = a.y.doubleValue();
+            double z1 = a.z.doubleValue();
+            return x*x1 + y*y1 + z*z1;
+        }
+        vec3<Double> cross(vec3<? extends Number> a)
+        {
+            double x = this.x.doubleValue();
+            double y = this.y.doubleValue();
+            double z = this.z.doubleValue();
+            double x1 = a.x.doubleValue();
+            double y1 = a.y.doubleValue();
+            double z1 = a.z.doubleValue();
+            
+            double cx= y*z1 - z*y1;
+            double cy = z*x1 - x*z1;
+            double cz = x*y1 - y*x1;
+            return new vec3(cx,cy,cz);
         }
     }
     class vec4<T extends Number>
@@ -294,7 +329,7 @@ public class Mat
         double [][] Pdiv(double [][]PPmm ,vec3<? extends Number> b)
         {
             double cods[][] = matrix(new vec4(b.x,b.y,b.z,1.0));
-            double r[][] = mul(PPmm,cods);
+            double r[][] = mult(PPmm,cods);
             if(r[3][0] != 0.0)
             {
                 r[0][0] /= r[3][0];
@@ -378,7 +413,48 @@ public class Mat
             a[2] /= mag;
             return a ;
         }
-        
+        double[][] lookAt(vec3<Double> pos,vec3 target,vec3 up )
+        {
+            vec3<Double> forward = new vec3<>(
+                target.getX().doubleValue() - pos.getX().doubleValue(),
+                target.getY().doubleValue() - pos.getY().doubleValue(),
+                target.getZ().doubleValue() - pos.getZ().doubleValue()
+            ).unit();
+            
+            vec3<Double> right = up.cross(forward).unit();
+            
+            vec3<Double> trueUp = forward.cross(right).unit();
+            
+            double px = pos.getX().doubleValue(),
+                   py = pos.getY().doubleValue(),
+                   pz = pos.getZ().doubleValue();
+            
+            return new double[][] {
+              {  right.getX().doubleValue(),  right.getY().doubleValue(),  right.getZ().doubleValue(),
+                - (right.getX().doubleValue()*px + right.getY().doubleValue()*py + right.getZ().doubleValue()*pz) },
+              {  trueUp.getX().doubleValue(),  trueUp.getY().doubleValue(),  trueUp.getZ().doubleValue(),
+                - (trueUp.getX().doubleValue()*px + trueUp.getY().doubleValue()*py + trueUp.getZ().doubleValue()*pz) },
+              { -forward.getX().doubleValue(), -forward.getY().doubleValue(), -forward.getZ().doubleValue(),
+                   ( forward.getX().doubleValue()*px + forward.getY().doubleValue()*py + forward.getZ().doubleValue()*pz) },
+              { 0, 0, 0, 1 }
+            };
+        }
+        double[][] qi(double [][] matix,vec3<Double> pos,vec3 tra,vec3 up )
+        {
+            vec3<Double> newForward =tra.sub(pos);
+            newForward = newForward.unit();
+            
+            vec3<Double> a = newForward.mult(newForward.dot(up));
+            vec3<Double> newUp = a.sub(up);
+            newUp= newUp.unit();
+            
+            vec3<Double> newRight =  newUp.cross(newForward);  
+            
+            matix[3][0] = -pos.dot(newRight);
+            matix[3][2] = -pos.dot(newUp);
+            matix[3][1] = -pos.dot(newForward);
+            return matix;
+        }
         void printer(double a[][])
         {
            for(int i = 0 ; i < a.length ; i++)
@@ -397,7 +473,7 @@ public class Mat
                System.out.println("x:"+a[i].x + " y:"+a[i].y);
            }
         }
-        double [][] mul(double a[][] , double b[][])
+        double[][] mult(double a[][] , double b[][])
         {
             if(a[0].length != b.length)
             {

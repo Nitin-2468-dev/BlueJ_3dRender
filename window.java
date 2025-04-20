@@ -8,9 +8,9 @@ public class window extends JFrame
 {
     private int width,height,fps,scale;
     private double fovD,znear,zfar;
-    private String title;
     private double model[][];
     private double word[][];
+    private double viewed[][];
     private double normal[][];
     private boolean face[];
     private int edge[][];
@@ -24,11 +24,20 @@ public class window extends JFrame
     private int count = 0;
     private String Path;
     private process proc = new process();
-    private Mat.vec3<Double> camera;
-    private Mat.vec3<Double> lightDir;
     private double amb = 0.2;
     private Color base = new Color(102,178,255);
-    ArrayList<Integer> faceOrder ;
+    private ArrayList<Integer> faceOrder ;
+    private input in  = new input();
+    int testx=0 , testy=0;
+    
+    private Mat.vec3<Double> Up;
+    private Mat.vec3<Double> target;
+    private Mat.vec3<Double> camera;
+    private Mat.vec3<Double> lookDir;
+    private Mat.vec3<Double> lightDir;
+    private double[][] mcamera;
+    private double[][] view;
+    private int speed = 1;
     window(int Width, int Height  ,int Fps,double fovD , double znear , double zfar ,int scale , double angle , boolean X, boolean Y, boolean Z,double cameraZ,String Path,Color base)
     {
         this.width = Width;
@@ -44,11 +53,13 @@ public class window extends JFrame
         this.Z = Z;
         this.displace= cameraZ;
         this.Path = Path;
-        this.title = proc.name;
-        this.camera = math.new vec3<>(0.0,0.0,0.0);
+        this.camera = math.new vec3<>(0.0,0.0,displace);
         this.lightDir = math.new vec3<>(1.0/Math.sqrt(1+1+1),1.0/Math.sqrt(1+1+1),-1.0/Math.sqrt(1+1+1));
         this.base = base;
+        this.Up = math.new vec3<>(0.0,1.0,0.0);
+        this.lookDir = math.new vec3<>(0.0,0.0,1.0);
         init();
+        
     }
     void init()
     {
@@ -57,6 +68,12 @@ public class window extends JFrame
         setLocationRelativeTo(null);
         add(new Render());
         setVisible(true);
+        addKeyListener(in);
+        setFocusable(true);
+    }
+    void Title(String title)
+    {
+        this.setTitle(title);
     }
     class Render extends JPanel
     {
@@ -75,6 +92,8 @@ public class window extends JFrame
             {
                 ioe.printStackTrace();
             }
+            String title = proc.name;
+            Title(title);
             model = proc.getVect();
             edge = proc.getEdge();
             word = model;
@@ -85,6 +104,25 @@ public class window extends JFrame
         }
         void update()
         {
+            target = camera.add(lookDir);
+            view = m.lookAt(camera, target, Up);
+            if(in.up)
+            {
+                 camera.setY(camera.getY() - speed );
+            }
+            if(in.down)
+            {
+                camera.setY(camera.getY() + speed );
+            }
+            if(in.left)
+            {
+                camera.setX(camera.getX() - speed );
+            }
+            if(in.right)
+            {
+                camera.setX(camera.getX() + speed );
+            }
+            
             if(X)
             {
                 word = rotationX(angle,word);
@@ -99,11 +137,18 @@ public class window extends JFrame
             }    
             double[][] cameraSpace = new double[word.length][3];
             for (int i = 0; i < word.length; i++) {
-                cameraSpace[i][0] = word[i][0];
-                cameraSpace[i][1] = word[i][1];
-                cameraSpace[i][2] = word[i][2] + displace;  
+                double[][] v4 = 
+                {
+                  {word[i][0]},
+                  {word[i][1]},
+                  {word[i][2]},
+                  {1}
+                };
+                double[][] r = m.mult(view,v4);
+                cameraSpace[i][0] = r[0][0];
+                cameraSpace[i][1] = r[1][0];
+                cameraSpace[i][2] = r[2][0];  
             }
-            
             normal = new double[edge.length][3];
             face = new boolean[edge.length];
             faceShader = new double[edge.length];
@@ -116,10 +161,10 @@ public class window extends JFrame
                 double r1 = cameraSpace[x][2];
                 double r2 = cameraSpace[y][2];
                 double r3 = cameraSpace[z][2];
-                depth[i] = r1+r2+r3/3;
+                depth[i] = (r1+r2+r3)/3;
                 faceOrder.add(i);
             }
-            faceOrder.sort((j,i) -> Double.compare(depth[i],depth[j]));
+            faceOrder.sort((i,j) -> Double.compare(depth[j],depth[i]));
             
             for(int i = 0 ; i < edge.length ; i++)
             {
@@ -157,9 +202,7 @@ public class window extends JFrame
                 diff = Math.min(1.0,Math.max(0.0,diff));
                 faceShader[i] = amb + (1-amb)*diff;
             }
-            
-            
-            
+                        
             projected = new Mat.vec2[cameraSpace.length];
             double PPmm[][] = m.PPmm(width,height,fovD,znear,zfar);
             for(int i = 0 ; i < cameraSpace.length ; i++)
@@ -170,15 +213,15 @@ public class window extends JFrame
         }
         double[][] rotationX(double a,double [][] vect)
         {
-            return  m.mul(vect,m.Rx(a));
+            return  m.mult(vect,m.Rx(a));
         }
         double[][] rotationZ(double a,double [][] vect)
         {
-            return  m.mul(vect,m.Rz(a));
+            return  m.mult(vect,m.Rz(a));
         }
         double[][] rotationY(double a,double [][] vect)
         {
-            return  m.mul(vect,m.Ry(a));
+            return  m.mult(vect,m.Ry(a));
         }
         public void paintComponent(Graphics g)
         {
@@ -187,7 +230,10 @@ public class window extends JFrame
             if (projected == null) {
                 return; 
             }
-             
+            
+            
+            // g2.drawRect(testx,testy,50,50);
+            
             int hw = (width/2),hh = (height/2);
             for(int i : faceOrder)
             {
@@ -238,6 +284,8 @@ public class window extends JFrame
                         
                         Polygon p = new Polygon(x, y, 3);
                         g2.fillPolygon(p);
+                        
+                        
                     }
                 }
             }
