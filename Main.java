@@ -20,11 +20,11 @@ class Main
         boolean Z = false;
         double cameraZ = 2;
         Color base = new Color(102,178,255);
-           String Path = "./cube.obj";
-        // String Path = "./Suzanne.obj";
-        // String Path = "./Primamed.obj";
-        // String Path = "./Icosphere.obj";
-        // String Path = "./axys.obj";
+           String Path = "./obj/cube.obj";
+        // String Path = "./obj/Suzanne.obj";
+        // String Path = "./obj/Primamed.obj";
+        // String Path = "./obj/Icosphere.obj";
+        // String Path = "./obj/axys.obj";
         
         window win = new window(Width,Height,Fps,fovD,znear,zfar,scale,angle,X,Y,Z,cameraZ,Path,base);
     }
