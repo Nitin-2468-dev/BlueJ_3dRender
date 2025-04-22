@@ -338,6 +338,10 @@
             }
             return r;
         }
+        vec3<Double> vec3(double []a)
+        {
+            return new vec3<Double>(a[0],a[1],a[2]);
+        }
         vec4 vec4(double [][]a)
         {
             return new vec4(a[0][0],a[1][0],a[2][0],a[3][0]);
