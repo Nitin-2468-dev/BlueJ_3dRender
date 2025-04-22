@@ -242,59 +242,44 @@ public class window extends JFrame
                            );
                 diff = Math.min(1.0,Math.max(0.0,diff));
                 faceShader[i] = amb + (1-amb)*diff;
-                
-                Mat.vec3 vex[] = {m.vec3(cameraSpace[x]) , m.vec3(cameraSpace[y]) , m.vec3(cameraSpace[z])};
-                ArrayList<Mat.vec3<Double>> clipped = clipTri(vex,znear);
-                
-                
-                if(clipped.size() < 3 )
-                {
-                    project(clip);
-                }
-                if(clipped.size() == 3 )
-                {
-                    draw(clipped.get(0),clipped.get(1),clipped.get(2),clip);
-                }
-                if(clipped.size() < 3 )
-                {
-                    draw(clipped.get(0),clipped.get(1),clipped.get(2),clip);
-                    repaint();
-                    draw(clipped.get(0),clipped.get(2),clipped.get(3),clip);
-                }
-            }            
-        }
-        int NearClip(Mat.vec3<Double> A, Mat.vec3<Double> B ,Mat.vec3<Double> C ,Mat.vec3<Double>[] clipBuffer , double znear )
-        {
-            Mat.vec3<Double>[] in = new Mat.vec3[]{A,B,C};
-            int inCount = 3;
-            int outCount = 0;
-            return 0;
-        }
-        void draw(Mat.vec3<Double> v0 , Mat.vec3<Double> v1 , Mat.vec3<Double> v2,double [][]clip)
-        {
-            clip[0][0] = v0.getX();
-            clip[0][1] = v0.getY();
-            clip[0][2] = v0.getZ();
-            
-            clip[1][0] = v0.getX();
-            clip[1][1] = v0.getY();
-            clip[1][2] = v0.getZ();
-            
-            clip[2][0] = v0.getX();
-            clip[2][1] = v0.getY();
-            clip[2][2] = v0.getZ();
-            
-            project(clip);
-        }
-        void project(double[][] clip)
-        {
-            projected = new Mat.vec3[clip.length];
+            }     
+            projected = new Mat.vec3[cameraSpace.length];
             double PPmm[][] = m.PPmm(width,height,fovD,znear,zfar);
             for(int i = 0 ; i < clip.length ; i++)
             {
-                double o[][] = m.Pdiv(PPmm,math.new vec3<>(clip[i][0],clip[i][1],clip[i][2]));
+                double o[][] = m.Pdiv(PPmm,math.new vec3<>(cameraSpace[i][0],cameraSpace[i][1],cameraSpace[i][2]));
                 projected[i] = math.new vec3<>(o[0][0],o[1][0],o[2][0]);
             } 
+        }
+        int NearClip(Mat.vec3<Double> v0, Mat.vec3<Double> v1 ,Mat.vec3<Double> v2 ,Mat.vec3<Double>[] clipBuffer , double znear )
+        {
+            Mat.vec3<Double>[] in = new Mat.vec3[]{v0,v1,v2};
+            int inCount = 3;
+            int outCount = 0;
+            for(int i = 0 ; i < inCount; i++)
+            {
+                Mat.vec3<Double> A = in[i];
+                Mat.vec3<Double> B = in[(i+1)%inCount];
+                boolean inA = A.getZ() > znear;
+                boolean inB = B.getZ() > znear;
+                
+                if(inA && inB)
+                {
+                    clipBuffer[outCount++] = B;
+                }
+                else if (inA && !inB)
+                {
+                    double t = (znear - A.getZ()) / (B.getZ() - A.getZ());
+                    clipBuffer[outCount++] = lerp(A,B,t);
+                }
+                else if (!inA && inB)
+                {
+                    double t = (znear - A.getZ()) / (B.getZ() - A.getZ());
+                    clipBuffer[outCount++] = lerp(A,B,t);
+                    clipBuffer[outCount++] = B;
+                }
+            }
+            return outCount;
         }
         double[][] rotationX(double a,double [][] vect)
         {
@@ -373,40 +358,6 @@ public class window extends JFrame
         {
             return math.new vec3<Double>(a.getX() + t*(b.getX() - a.getX()),a.getY() + t*(b.getY() - a.getY()),a.getZ() + t*(b.getZ() - a.getZ()));
         }
-        ArrayList<Mat.vec3<Double>> clipTri(Mat.vec3<Double>[] tri, double znear )
-        {
-            ArrayList<Mat.vec3<Double>> input = new ArrayList<>();
-            ArrayList<Mat.vec3<Double>> output = new ArrayList<>();
-            for(int i = 0 ; i < tri.length ; i++)
-            {
-                input.add(tri[i]);
-            }
-            
-            for(int i = 0 ; i < input.size(); i++)
-            {
-                Mat.vec3<Double> A = input.get(i);
-                Mat.vec3<Double> B = input.get((i+1) % input.size());
-                boolean insideA = A.getZ() > znear ;
-                boolean insideB = B.getZ() > znear ;
-                
-                if(insideA && insideB)
-                {
-                    output.add(B);
-                }
-                else if(insideA && !insideB)
-                {
-                    double t = (znear - A.getZ()) / (B.getZ() - A.getZ());
-                    output.add(lerp(A,B,t));
-                }
-                else if(!insideA && insideB)
-                {
-                    double t = (znear - A.getZ()) / (B.getZ() - A.getZ());
-                    output.add(lerp(A,B,t));
-                    output.add(B);
-                }
-            }
-            return output;
-        }
         public void paintComponent(Graphics g)
         {
             super.paintComponent(g);
@@ -433,6 +384,14 @@ public class window extends JFrame
                       Math.min(255, Math.max(0, G)),
                       Math.min(255, Math.max(0, B))
                     );
+                    Mat.vec3 clipBuffer[] = new Mat.vec3[4];
+                    int clipCount;
+                    clipCount = NearClip(v0,v1,v2,clipBuffer,znear);
+                    
+                    if(clipCount < 3 )
+                    {
+                        continue;
+                    }
                     rasterTri(v0,v1,v2,scale,hw,hh,fillC);
                 }
             }
