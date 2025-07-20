@@ -4,6 +4,8 @@ Enhanced Clinical Rule Generation System
 A clinical decision support system for symptom analysis and diagnosis.
 """
 
+import argparse
+import itertools
 import random
 import re
 from typing import List, Dict, Tuple, Set
@@ -290,10 +292,88 @@ class ClinicalRuleEngine:
         }
 
 
-def generate_enhanced_rules(max_rules: int = 300) -> None:
-    """Generate enhanced clinical rules (placeholder for future implementation)."""
-    print(f"Generating {max_rules} enhanced clinical rules...")
-    print("Rule generation complete.")
+def generate_enhanced_rules(max_rules: int = 300, combo_length: int = 3) -> None:
+    """
+    Generate enhanced clinical rules using symptom combinations.
+    
+    Args:
+        max_rules: Maximum number of rules to generate
+        combo_length: Length of symptom combinations (2, 3, or 4)
+    """
+    # Initialize the engine
+    engine = ClinicalRuleEngine()
+    symptoms = list(engine.symptoms)
+    
+    print(f"=== Enhanced Clinical Rule Generation ===")
+    print(f"Engine initialized with {len(symptoms)} symptoms")
+    print(f"Generating combinations of length: {combo_length}")
+    print(f"Maximum rules to generate: {max_rules}")
+    print()
+    
+    # Generate all possible combinations of the specified length
+    if combo_length == "all":
+        # Generate combinations of length 2, 3, and 4
+        all_combinations = []
+        for length in [2, 3, 4]:
+            combinations = list(itertools.combinations(symptoms, length))
+            all_combinations.extend(combinations)
+        print(f"Generated {len(all_combinations)} total combinations (lengths 2, 3, 4)")
+    else:
+        all_combinations = list(itertools.combinations(symptoms, combo_length))
+        print(f"Generated {len(all_combinations)} combinations of length {combo_length}")
+    
+    # Limit the number of combinations if requested
+    if max_rules > 0 and len(all_combinations) > max_rules:
+        selected_combinations = random.sample(all_combinations, max_rules)
+        print(f"Selected {len(selected_combinations)} combinations (limited by max_rules)")
+    else:
+        selected_combinations = all_combinations
+        print(f"Processing all {len(selected_combinations)} combinations")
+    
+    print()
+    print("=== Analyzing Symptom Combinations ===")
+    print()
+    
+    # Analyze each combination and generate rules
+    rule_count = 0
+    for i, symptom_combo in enumerate(selected_combinations):
+        rule_count += 1
+        symptoms_list = list(symptom_combo)
+        
+        print(f"Rule {rule_count}: Analyzing symptoms: {', '.join(symptoms_list)}")
+        
+        # Perform clinical analysis
+        results = engine.analyze_symptoms(symptoms_list)
+        
+        # Display results
+        if results['primary_diagnosis'][1] > 0:  # Only show if there's a valid diagnosis
+            primary_diagnosis, primary_confidence = results['primary_diagnosis']
+            print(f"  → Primary Diagnosis: {primary_diagnosis} (Confidence: {primary_confidence})")
+            
+            if results['differential_diagnoses']:
+                differentials = results['differential_diagnoses'][:2]  # Show top 2 alternatives
+                diff_str = ", ".join([f"{d[0]} ({d[1]})" for d in differentials])
+                print(f"  → Alternatives: {diff_str}")
+            
+            print(f"  → Urgency: {results['urgency_level']}")
+            
+            if results['red_flags']:
+                flags_str = ", ".join(results['red_flags'])
+                print(f"  → Red Flags: {flags_str}")
+        else:
+            print("  → No significant diagnosis patterns identified")
+        
+        print()
+        
+        # Add a break for very long outputs
+        if rule_count >= 20 and max_rules > 20:
+            remaining = len(selected_combinations) - i - 1
+            if remaining > 0:
+                print(f"  ... processing {remaining} more combinations ...")
+                print()
+            break
+    
+    print(f"Enhanced rule generation complete. Generated {rule_count} clinical rules.")
 
 
 def main():
@@ -343,11 +423,62 @@ def main():
         print("Red Flags: None detected")
 
 
+def parse_arguments():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description='Enhanced Clinical Rule Generation System',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python enhanced_clinical_gen.py --demo                    # Run demo mode
+  python enhanced_clinical_gen.py --combo-length=3         # Generate 3-symptom combinations  
+  python enhanced_clinical_gen.py --combo-length=2 --max-rules=50  # Generate 50 2-symptom rules
+  python enhanced_clinical_gen.py --combo-length=all       # Generate combinations of lengths 2, 3, and 4
+        """
+    )
+    
+    parser.add_argument(
+        '--demo', 
+        action='store_true',
+        help='Run in demo mode (shows sample analysis output)'
+    )
+    
+    parser.add_argument(
+        '--combo-length',
+        type=str,
+        default='3',
+        help='Length of symptom combinations to generate (2, 3, 4, or "all" for 2+3+4). Default: 3'
+    )
+    
+    parser.add_argument(
+        '--max-rules',
+        type=int, 
+        default=300,
+        help='Maximum number of rules to generate. Use 0 for unlimited. Default: 300'
+    )
+    
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    # Run the main analysis
-    main()
+    args = parse_arguments()
     
-    print("\n" + "="*50)
-    
-    # Also call the generate_enhanced_rules function as mentioned in requirements
-    generate_enhanced_rules(max_rules=300)
+    if args.demo:
+        # Run the demo mode
+        print("=== Demo Mode ===")
+        print()
+        main()
+    else:
+        # Run enhanced rule generation mode
+        combo_length = args.combo_length
+        if combo_length != "all":
+            try:
+                combo_length = int(combo_length)
+                if combo_length not in [2, 3, 4]:
+                    print("Error: combo-length must be 2, 3, 4, or 'all'")
+                    exit(1)
+            except ValueError:
+                print("Error: combo-length must be 2, 3, 4, or 'all'")
+                exit(1)
+        
+        generate_enhanced_rules(max_rules=args.max_rules, combo_length=combo_length)
